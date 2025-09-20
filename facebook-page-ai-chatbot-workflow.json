@@ -1,0 +1,217 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "fb-web",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        96
+      ],
+      "id": "698f1168-049d-436b-9115-fa4cf3f5f54a",
+      "name": "Webhook",
+      "webhookId": "ea0d5054-c148-4093-9456-29e4824ac4b3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.entry[0].messaging[0].message.text }}",
+        "options": {
+          "systemMessage": "You are a comedian assistant. You bring fun even in a sad day.\nAnswer question in under 100 words."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        192
+      ],
+      "id": "bbefd5e2-4ac9-460b-9def-4423b57fc120",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-nano"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        400
+      ],
+      "id": "25d9dc06-b442-4b95-b87a-23ae153fadc4",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "stIJ0ie2s25WP49l",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/{{ $('Webhook').item.json.body.entry[0].messaging[0].recipient.id }}/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "EAASZBRBEjhF4BPfc6snxxZBaXKSivfKr20WQ9sI56L4rsQuZBtahXPE8pqZBrEe1ZBtPnGwAyKmGOs1hkJspS3JaPDpY4ZCFfexMT4wTXRl2fZA73D761NgM2gUxXgAnbZAgoDmYhlukqbfa3qQzs7optjNhA0IWT1ZCmmluQOILZBVQFkbgRVduoAK0aTuqUZBwZAIK9KUbHEuYiiZBumI6hgoCz0n8f"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}\"\n  },\n  \"messaging_type\": \"RESPONSE\",\n  \"message\": {\n    \"text\": \"{{ $json.output }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        192
+      ],
+      "id": "ca1e3e41-a527-430a-b742-581dbc536258",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($input.first().json.query['hub.verify_token'] === \"aichatbot\") {\n  return [\n    {\n      json: {\n        response: {\n        body: $input.first().json.query['hub.challenge'], // plain text only\n        headers: { \"Content-Type\": \"text/plain\" },\n        statusCode: 200\n      }\n\n        \n      },\n      \n    }\n  ];\n} else {\n  return [\n    {\n      json: {\n        response: {\n        body: \"Invalid verify token\",\n        headers: { \"Content-Type\": \"text/plain\" },\n        statusCode: 403\n      }\n      },\n      \n    }\n  ];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        16
+      ],
+      "id": "c007f2f3-1549-412e-8c88-7640049101cd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.response.body }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        464,
+        16
+      ],
+      "id": "0b277160-354e-403d-91d4-aa9bf245fd3a",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.entry[0].messaging[0].sender.id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        448
+      ],
+      "id": "766d1bf0-a5a3-4467-92c4-f3a38da47c51",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "37cc1d5b-97ba-4329-af03-f86ad08d0bda",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3804e123d5031fc0d2977d9762aafa045cb784927c34de29475c8c20b53d6459"
+  },
+  "id": "7jOGyRE02BfwJr0n",
+  "tags": []
+}
